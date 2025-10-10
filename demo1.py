@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\Wangzz\20251009\inst_info1.txt"
-NETLIST_FILE = r"C:\Wangzz\20251009\netlist1.txt"
-STENCIL      = r"C:\Wangzz\20251009\circuit.vss"
+INPUT_FILE   = r"C:\inst_info1.txt"
+NETLIST_FILE = r"C:\netlist1.txt"
+STENCIL      = r"C:\circuit.vss"
 SCALE        = 1.5
 
 # 元件尺寸
@@ -297,3 +297,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
