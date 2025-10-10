@@ -61,9 +61,10 @@
 
 | 文件名         | 说明                         |
 |----------------|------------------------------|
-| `demo1.py`     | 主程序入口，生成 Visio 图形 |
+| `candence_to_visio.py`     | 主程序入口，生成 Visio 图形 |
 | `netlist.txt`  | CDL 格式电路网表             |
 | `inst_info.txt`| 实例坐标与方向信息           |
+| `circuit.vss`| 模拟电路visio模板           |
 
 ---
 
