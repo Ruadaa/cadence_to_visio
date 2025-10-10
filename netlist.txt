@@ -1,31 +1,3 @@
-************************************************************************
-* auCdl Netlist:
-* 
-* Library Name:  XC25A_4MSRM_V2_C
-* Top Cell Name: LVSX22V_25
-* View Name:     schematic
-* Netlisted on:  Oct 10 12:33:13 2025
-************************************************************************
-
-*.BIPOLAR
-*.RESI = 2000 
-*.RESVAL
-*.CAPVAL
-*.DIOPERI
-*.DIOAREA
-*.EQUATION
-*.SCALE METER
-*.MEGA
-.PARAM
-
-
-
-************************************************************************
-* Library Name: XC25A_4MSRM_V2_C
-* Cell Name:    LVSX22V_25
-* View Name:    schematic
-************************************************************************
-
 .SUBCKT LVSX22V_25 EN VDDA VRef VSSA VWL2V
 *.PININFO EN:I VDDA:I VRef:I VSSA:I VWL2V:O
 XR1 net153 VSSA rpposab_2t_ckt r=121.357K w=800n l=152u mr=1
@@ -56,4 +28,5 @@ XPM14 VWL2V net91 VWL2V VWL2V p25ll_ckt mr=1 l=10u w=4u
 XPM6 net182 net119 VDDA VDDA p25ll_ckt mr=1 l=350n w=1.2u
 XPM7 net103 EN net182 VDDA p25ll_ckt mr=1 l=1.2u w=2u
 .ENDS
+
 
