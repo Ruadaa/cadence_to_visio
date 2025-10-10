@@ -123,37 +123,5 @@ Name: PM14  Cell: p25ll_ckt
   Orient: R0
   BBox: ((1.7625 0.825) (2.9875 1.46875))
 
-Name: PM6  Cell: p25ll_ckt
-  XY: (-3.625 2.1875)
-  Orient: R0
-  BBox: ((-4.05 1.825) (-2.825 2.46875))
 
-Name: PM7  Cell: p25ll_ckt
-  XY: (-4.4375 0.75)
-  Orient: MY
-  BBox: ((-5.2375 0.3875) (-4.0125 1.03125))
 
-Name: PIN1  Cell: ipin
-  XY: (-6.3125 -2.5)
-  Orient: R0
-  BBox: ((-6.66875 -2.6625) (-6.3125 -2.4375))
-
-Name: PIN2  Cell: ipin
-  XY: (-5.375 0.0)
-  Orient: R0
-  BBox: ((-5.73125 -0.1625) (-5.375 0.0625))
-
-Name: PIN0  Cell: ipin
-  XY: (-6.0 2.75)
-  Orient: R0
-  BBox: ((-6.35625 2.5875) (-6.0 2.8125))
-
-Name: PIN20  Cell: ipin
-  XY: (-6.5625 1.3125)
-  Orient: R0
-  BBox: ((-6.91875 1.15) (-6.5625 1.375))
-
-Name: PIN3  Cell: opin
-  XY: (3.1875 0.25)
-  Orient: R0
-  BBox: ((3.1875 0.0875) (3.54375 0.3125))
