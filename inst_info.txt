@@ -1,0 +1,159 @@
+Name: R1  Cell: rpposab_2t_ckt
+  XY: (2.75 -1.625)
+  Orient: R0
+  BBox: ((1.9875 -2.08125) (3.36875 -1.53125))
+
+Name: R2  Cell: rpposab_2t_ckt
+  XY: (2.75 -0.0625)
+  Orient: R0
+  BBox: ((1.9875 -0.51875) (3.36875 0.03125))
+
+Name: R3  Cell: rpposab_2t_ckt
+  XY: (1.5625 0.625)
+  Orient: R90
+  BBox: ((1.46875 -0.1375) (2.01875 1.24375))
+
+Name: NM2  Cell: n25ll_ckt
+  XY: (-3.8125 -1.5625)
+  Orient: R0
+  BBox: ((-4.2375 -1.925) (-3.0125 -1.28125))
+
+Name: NM8  Cell: n25ll_ckt
+  XY: (-2.625 -1.8125)
+  Orient: MY
+  BBox: ((-3.425 -2.175) (-2.2 -1.53125))
+
+Name: NM9  Cell: n25ll_ckt
+  XY: (0.625 -1.8125)
+  Orient: R0
+  BBox: ((0.2 -2.175) (1.425 -1.53125))
+
+Name: NM1  Cell: n25ll_ckt
+  XY: (-4.9375 -2.0)
+  Orient: R0
+  BBox: ((-5.3625 -2.3625) (-4.1375 -1.71875))
+
+Name: NM5  Cell: n25ll_ckt
+  XY: (-1.875 -1.8125)
+  Orient: R0
+  BBox: ((-2.3 -2.175) (-1.075 -1.53125))
+
+Name: NM6  Cell: n25ll_ckt
+  XY: (-4.9375 -0.5625)
+  Orient: R0
+  BBox: ((-5.3625 -0.925) (-4.1375 -0.28125))
+
+Name: NM12  Cell: n25ll_ckt
+  XY: (-0.125 -1.8125)
+  Orient: MY
+  BBox: ((-0.925 -2.175) (0.3 -1.53125))
+
+Name: NM11  Cell: n25ll_ckt
+  XY: (-4.9375 -0.9375)
+  Orient: R0
+  BBox: ((-5.3625 -1.3) (-4.1375 -0.65625))
+
+Name: NM4  Cell: n25ll_ckt
+  XY: (-6.0625 0.6875)
+  Orient: R0
+  BBox: ((-6.4875 0.325) (-5.2625 0.96875))
+
+Name: NM3  Cell: n25ll_ckt
+  XY: (1.9375 -1.5625)
+  Orient: MY
+  BBox: ((1.1375 -1.925) (2.3625 -1.28125))
+
+Name: NM0  Cell: n25ll_ckt
+  XY: (-4.9375 -1.5)
+  Orient: R0
+  BBox: ((-5.3625 -1.8625) (-4.1375 -1.21875))
+
+Name: PM3  Cell: p25ll_ckt
+  XY: (1.4375 2.1875)
+  Orient: R0
+  BBox: ((1.0125 1.825) (2.2375 2.46875))
+
+Name: PM11  Cell: p25ll_ckt
+  XY: (2.5 1.75)
+  Orient: R0
+  BBox: ((2.075 1.3875) (3.3 2.03125))
+
+Name: PM9  Cell: p25ll_ckt
+  XY: (-2.625 1.1875)
+  Orient: MY
+  BBox: ((-3.425 0.825) (-2.2 1.46875))
+
+Name: PM10  Cell: p25ll_ckt
+  XY: (0.625 1.1875)
+  Orient: R0
+  BBox: ((0.2 0.825) (1.425 1.46875))
+
+Name: PM0  Cell: p25ll_ckt
+  XY: (-4.4375 1.875)
+  Orient: MY
+  BBox: ((-5.2375 1.5125) (-4.0125 2.15625))
+
+Name: PM1  Cell: p25ll_ckt
+  XY: (-1.25 1.875)
+  Orient: R0
+  BBox: ((-1.675 1.5125) (-0.45 2.15625))
+
+Name: PM4  Cell: p25ll_ckt
+  XY: (-0.125 0.0)
+  Orient: MY
+  BBox: ((-0.925 -0.3625) (0.3 0.28125))
+
+Name: PM2  Cell: p25ll_ckt
+  XY: (-1.875 0.0)
+  Orient: R0
+  BBox: ((-2.3 -0.3625) (-1.075 0.28125))
+
+Name: PM8  Cell: p25ll_ckt
+  XY: (-6.0625 1.9375)
+  Orient: R0
+  BBox: ((-6.4875 1.575) (-5.2625 2.21875))
+
+Name: PM13  Cell: p25ll_ckt
+  XY: (2.1875 0.625)
+  Orient: R0
+  BBox: ((1.7625 0.2625) (2.9875 0.90625))
+
+Name: PM14  Cell: p25ll_ckt
+  XY: (2.1875 1.1875)
+  Orient: R0
+  BBox: ((1.7625 0.825) (2.9875 1.46875))
+
+Name: PM6  Cell: p25ll_ckt
+  XY: (-3.625 2.1875)
+  Orient: R0
+  BBox: ((-4.05 1.825) (-2.825 2.46875))
+
+Name: PM7  Cell: p25ll_ckt
+  XY: (-4.4375 0.75)
+  Orient: MY
+  BBox: ((-5.2375 0.3875) (-4.0125 1.03125))
+
+Name: PIN1  Cell: ipin
+  XY: (-6.3125 -2.5)
+  Orient: R0
+  BBox: ((-6.66875 -2.6625) (-6.3125 -2.4375))
+
+Name: PIN2  Cell: ipin
+  XY: (-5.375 0.0)
+  Orient: R0
+  BBox: ((-5.73125 -0.1625) (-5.375 0.0625))
+
+Name: PIN0  Cell: ipin
+  XY: (-6.0 2.75)
+  Orient: R0
+  BBox: ((-6.35625 2.5875) (-6.0 2.8125))
+
+Name: PIN20  Cell: ipin
+  XY: (-6.5625 1.3125)
+  Orient: R0
+  BBox: ((-6.91875 1.15) (-6.5625 1.375))
+
+Name: PIN3  Cell: opin
+  XY: (3.1875 0.25)
+  Orient: R0
+  BBox: ((3.1875 0.0875) (3.54375 0.3125))

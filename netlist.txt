@@ -1,0 +1,59 @@
+************************************************************************
+* auCdl Netlist:
+* 
+* Library Name:  XC25A_4MSRM_V2_C
+* Top Cell Name: LVSX22V_25
+* View Name:     schematic
+* Netlisted on:  Oct 10 12:33:13 2025
+************************************************************************
+
+*.BIPOLAR
+*.RESI = 2000 
+*.RESVAL
+*.CAPVAL
+*.DIOPERI
+*.DIOAREA
+*.EQUATION
+*.SCALE METER
+*.MEGA
+.PARAM
+
+
+
+************************************************************************
+* Library Name: XC25A_4MSRM_V2_C
+* Cell Name:    LVSX22V_25
+* View Name:    schematic
+************************************************************************
+
+.SUBCKT LVSX22V_25 EN VDDA VRef VSSA VWL2V
+*.PININFO EN:I VDDA:I VRef:I VSSA:I VWL2V:O
+XR1 net153 VSSA rpposab_2t_ckt r=121.357K w=800n l=152u mr=1
+XR2 VWL2V net153 rpposab_2t_ckt r=91.0181K w=800n l=114u mr=1
+XR3 net91 net85 rpposab_2t_ckt r=313.755 w=4u l=2u mr=1
+XNM2 net127 EN VSSA VSSA n25ll_ckt mr=1 l=350n w=800n
+XNM8 net87 net127 VSSA VSSA n25ll_ckt mr=2 l=2.8u w=1.2u
+XNM9 net91 net107 VSSA VSSA n25ll_ckt mr=2 l=2.8u w=1.2u
+XNM1 net95 VRef VSSA VSSA n25ll_ckt mr=1 l=8u w=1u
+XNM5 net127 net127 VSSA VSSA n25ll_ckt mr=1 l=2.8u w=1.2u
+XNM6 net103 VRef net111 VSSA n25ll_ckt mr=1 l=8u w=1u
+XNM12 net107 net107 VSSA VSSA n25ll_ckt mr=1 l=2.8u w=1.2u
+XNM11 net111 VRef net115 VSSA n25ll_ckt mr=1 l=8u w=1u
+XNM4 net119 EN VSSA VSSA n25ll_ckt mr=2 l=2.8u w=1.2u
+XNM3 net107 EN VSSA VSSA n25ll_ckt mr=1 l=350n w=800n
+XNM0 net115 VRef net95 VSSA n25ll_ckt mr=1 l=8u w=1u
+XPM3 net91 net119 VDDA VDDA p25ll_ckt mr=1 l=350n w=1.2u
+XPM11 VWL2V net91 VDDA VDDA p25ll_ckt mr=4 l=400n w=10u
+XPM9 net87 net87 VDDA VDDA p25ll_ckt mr=4 l=2.4u w=2u
+XPM10 net91 net87 VDDA VDDA p25ll_ckt mr=4 l=2.4u w=2u
+XPM0 net182 net182 VDDA VDDA p25ll_ckt mr=1 l=1.8u w=2.8u
+XPM1 net156 net182 VDDA VDDA p25ll_ckt mr=2 l=1.8u w=2.8u
+XPM4 net107 net153 net156 net156 p25ll_ckt mr=4 l=2.4u w=2u
+XPM2 net127 VRef net156 net156 p25ll_ckt mr=4 l=2.4u w=2u
+XPM8 net119 EN VDDA VDDA p25ll_ckt mr=1 l=350n w=1.2u
+XPM13 VWL2V net85 VWL2V VWL2V p25ll_ckt mr=4 l=10u w=12u
+XPM14 VWL2V net91 VWL2V VWL2V p25ll_ckt mr=1 l=10u w=4u
+XPM6 net182 net119 VDDA VDDA p25ll_ckt mr=1 l=350n w=1.2u
+XPM7 net103 EN net182 VDDA p25ll_ckt mr=1 l=1.2u w=2u
+.ENDS
+
