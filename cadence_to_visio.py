@@ -3,8 +3,8 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\inst_info1.txt"
-NETLIST_FILE = r"C:\netlist1.txt"
+INPUT_FILE   = r"C:\inst_info.txt"
+NETLIST_FILE = r"C:\netlist.txt"
 STENCIL      = r"C:\circuit.vss"
 SCALE        = 1.5
 
@@ -297,4 +297,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
