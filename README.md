@@ -43,6 +43,8 @@
      )
      exportInstXYOrient( geGetEditCellView() "/home/.../inst_info.txt" )
      ```
+3. **`circuit.vss`**  
+   - 模拟电路visio模板   
 
 ---
 
@@ -57,18 +59,8 @@
 
 ---
 
-## 📁 文件说明
 
-| 文件名         | 说明                         |
-|----------------|------------------------------|
-| `candence_to_visio.py`     | 主程序入口，生成 Visio 图形 |
-| `netlist.txt`  | CDL 格式电路网表             |
-| `inst_info.txt`| 实例坐标与方向信息           |
-| `circuit.vss`| 模拟电路visio模板           |
-
----
-
-## 📌 注意事项
+## 📌 tips
 
 - 本工具仅用于辅助绘图，当前仅支持 MOS 管绘制，其他器件以 `Unknown` 代替。
 - 连线部分仅根据网表生成部分横竖线，尚不支持完整布线。
