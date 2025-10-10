@@ -14,10 +14,8 @@ W_PMOS, H_PMOS = 0.44, 0.59
 W_UNKNOWN, H_UNKNOWN = 0.25, 0.25
 
 # 不参与连线的网络与引脚
-EXCLUDED_NETS = {"VDDA", "GNDA"}
+EXCLUDED_NETS = {"VDDA", "VSSA", "GNDA"}
 EXCLUDED_PINS = {"B"}
-
-
 
 # === 方向应用到 Visio 形状 ===
 def apply_orientation(shape, orient):
@@ -65,12 +63,12 @@ def parse_instances(filename):
         instances[name] = {
             "name": name,
             "type": dev_type,
-            "xy": (x, y),      # 作为器件中心点
+            "xy": (x, y),
             "orient": orient
         }
     return instances
 
-# === 解析 netlist.txt（去掉器件名前缀 X） ===
+# === 解析 netlist.txt ===
 def parse_netlist(filename):
     devices = []
     with open(filename, "r") as f:
@@ -78,24 +76,16 @@ def parse_netlist(filename):
             line = line.strip()
             if not line or line.startswith("*") or line.startswith("."):
                 continue
-
-            # 分割整行
             tokens = line.split()
             if len(tokens) < 3:
                 continue
-
             raw_name = tokens[0]
             model_idx = next((i for i, t in enumerate(tokens) if t.endswith("_ckt")), None)
             if model_idx is None or model_idx < 2:
                 continue
-
             pins = tokens[1:model_idx]
             model = tokens[model_idx]
-
-            # 去掉前缀 X
             name = raw_name[1:] if raw_name.startswith("X") else raw_name
-
-            # 判断器件类型
             if name.upper().startswith("NM"):
                 dev_type = "NMOS"
                 pin_names = ["D", "G", "S", "B"]
@@ -108,7 +98,6 @@ def parse_netlist(filename):
             else:
                 dev_type = "UNKNOWN"
                 pin_names = [f"P{i+1}" for i in range(len(pins))]
-
             pin_map = dict(zip(pin_names, pins))
             devices.append({
                 "name": name,
@@ -118,60 +107,71 @@ def parse_netlist(filename):
             })
     return devices
 
-# === 方向/镜像下的引脚坐标变换（以器件中心为基准） ===
+# === 引脚坐标（含旋转/镜像） ===
 def get_pin_position(inst, pin, w, h):
-    cx, cy = inst["xy"]   # 器件中心坐标（注意：drop 时用中心对齐）
+    cx, cy = inst["xy"]
     orient = inst["orient"]
-
-    # R0 情况下的局部坐标（以中心为基准）
     if inst["type"] == "NMOS":
-        local_map = {
-            "D": ( w/2,  h/2),  # 右上角
-            "G": (-w/2,  0   ), # 左中
-            "S": ( w/2, -h/2),  # 右下角
-            "B": ( w/2,  0   ), # 右中
-        }
+        local_map = {"D": ( w/2,  h/2), "G": (-w/2, 0), "S": ( w/2,-h/2), "B": ( w/2, 0)}
     elif inst["type"] == "PMOS":
-        local_map = {
-            "D": ( w/2, -h/2),  # 右下角
-            "G": (-w/2,  0   ), # 左中
-            "S": ( w/2,  h/2),  # 右上角
-            "B": ( w/2,  0   ), # 右中
-        }
+        local_map = {"D": ( w/2,-h/2), "G": (-w/2, 0), "S": ( w/2, h/2), "B": ( w/2, 0)}
     else:
         return (cx, cy)
-
     if pin not in local_map:
         return (cx, cy)
-
     lx, ly = local_map[pin]
-
-    # 几何变换
     def rotate(x, y, angle):
         cos_a, sin_a = math.cos(angle), math.sin(angle)
         return (x*cos_a - y*sin_a, x*sin_a + y*cos_a)
-
-    if orient == "R0":
-        tx, ty = lx, ly
-    elif orient == "R90":
-        tx, ty = rotate(lx, ly, math.pi/2)
-    elif orient == "R180":
-        tx, ty = rotate(lx, ly, math.pi)
-    elif orient == "R270":
-        tx, ty = rotate(lx, ly, 3*math.pi/2)
-    elif orient == "MX":   # Y 轴翻转
-        tx, ty = lx, -ly
-    elif orient == "MY":   # X 轴翻转
-        tx, ty = -lx, ly
-    elif orient == "MXR90":
-        tx, ty = rotate(lx, -ly, math.pi/2)
-    elif orient == "MYR90":
-        tx, ty = rotate(-lx, ly, math.pi/2)
-    else:
-        tx, ty = lx, ly
-
-    # 转换到全局坐标（中心平移）
+    if orient == "R0": tx, ty = lx, ly
+    elif orient == "R90": tx, ty = rotate(lx, ly, math.pi/2)
+    elif orient == "R180": tx, ty = rotate(lx, ly, math.pi)
+    elif orient == "R270": tx, ty = rotate(lx, ly, 3*math.pi/2)
+    elif orient == "MX": tx, ty = lx, -ly
+    elif orient == "MY": tx, ty = -lx, ly
+    elif orient == "MXR90": tx, ty = rotate(lx, -ly, math.pi/2)
+    elif orient == "MYR90": tx, ty = rotate(-lx, ly, math.pi/2)
+    else: tx, ty = lx, ly
     return (cx + tx, cy + ty)
+
+# === 包围盒与穿越检测 ===
+def get_bbox(inst, w, h):
+    cx, cy = inst["xy"]
+    return (cx - w/2, cy - h/2, cx + w/2, cy + h/2)
+
+def segment_crosses_bbox(p1, p2, bboxes, ignore_names):
+    x1, y1 = p1; x2, y2 = p2
+    horiz = abs(y1 - y2) < 1e-6
+    vert  = abs(x1 - x2) < 1e-6
+    if not (horiz or vert): return False
+    xmin, xmax = min(x1, x2), max(x1, x2)
+    ymin, ymax = min(y1, y2), max(y1, y2)
+    for name,(bxmin,bymin,bxmax,bymax) in bboxes.items():
+        if name in ignore_names: continue
+        if horiz:
+            if bymin <= y1 <= bymax and not (xmax < bxmin or xmin > bxmax):
+                return True
+        elif vert:
+            if bxmin <= x1 <= bxmax and not (ymax < bymin or ymin > bymax):
+                return True
+    return False
+
+def segment_hits_other_net_point(p1, p2, all_points, same_net_points):
+    x1, y1 = p1; x2, y2 = p2
+    horiz = abs(y1 - y2) < 1e-6
+    vert  = abs(x1 - x2) < 1e-6
+    if not (horiz or vert): return False
+    xmin, xmax = min(x1, x2), max(x1, x2)
+    ymin, ymax = min(y1, y2), max(y1, y2)
+    same_set = {pt for pt in same_net_points}
+    for (px, py) in all_points:
+        if (px, py) in same_set:
+            continue
+        if horiz and abs(py - y1) < 1e-6 and xmin <= px <= xmax:
+            return True
+        if vert and abs(px - x1) < 1e-6 and ymin <= py <= ymax:
+            return True
+    return False
 
 # === 放置器件并记录引脚位置 ===
 def drop_with_label(page, master, inst, w, h, pin_positions):
@@ -179,7 +179,7 @@ def drop_with_label(page, master, inst, w, h, pin_positions):
     name = inst["name"]
     orient = inst["orient"]
 
-    # 以中心放置形状（PinX/PinY 在中心）
+    # 以中心放置形状
     shp = page.Drop(master, cx, cy)
     shp.Text = name
     shp.CellsU("Width").ResultIU  = w
@@ -191,20 +191,21 @@ def drop_with_label(page, master, inst, w, h, pin_positions):
     shp.CellsU("TxtWidth").ResultIU  = 0.6
     shp.CellsU("TxtHeight").ResultIU = 0.2
 
-    # 应用形状方向
+    # 应用方向
     apply_orientation(shp, orient)
 
-    # 记录四个引脚的坐标（经过方向/镜像变换）
+    # 记录四个引脚的坐标
     for pin in ["D", "G", "S", "B"]:
         pin_positions[name + ":" + pin] = get_pin_position(inst, pin, w, h)
 
     return shp
 
-# === 自动绘制连线（仅横线/竖线；排除 B/VSSA/VSSD） ===
-def draw_net_lines(page, netlist, pin_positions, M_LINE):
-    net_to_segments = {}
+# === 自动绘制连线（横/竖线；排除规则；跳过 D-S；去冗余；避免穿越） ===
+def draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes):
+    net_to_points = {}
+    all_points = []
 
-    # 构建每个 net 的线段列表（仅横/竖线）
+    # 收集每个网络的点
     for dev in netlist:
         name = dev["name"]
         for pin, net in dev["pins"].items():
@@ -212,26 +213,43 @@ def draw_net_lines(page, netlist, pin_positions, M_LINE):
                 continue
             key = name + ":" + pin
             if key in pin_positions:
-                net_to_segments.setdefault(net, []).append((name, pin, pin_positions[key]))
+                pt = pin_positions[key]
+                net_to_points.setdefault(net, []).append((name, pin, pt))
+                all_points.append(pt)
 
-    for net, pins in net_to_segments.items():
+    # 遍历网络
+    for net, pins in net_to_points.items():
         segments = []
+        coords_same_net = [pt for _, _, pt in pins]
+
         for i in range(len(pins)):
             for j in range(i+1, len(pins)):
                 name1, pin1, p1 = pins[i]
                 name2, pin2, p2 = pins[j]
 
-                # ✅ 跳过同一器件的 D-S 连线
+                # 跳过同一器件的 D-S
                 if name1 == name2 and {pin1.upper(), pin2.upper()} == {"D", "S"}:
                     continue
 
-                if abs(p1[0] - p2[0]) < 1e-6 or abs(p1[1] - p2[1]) < 1e-6:
-                    x1, y1 = p1
-                    x2, y2 = p2
-                    if x1 > x2 or y1 > y2:
-                        x1, y1, x2, y2 = x2, y2, x1, y1
-                    segments.append(((x1, y1), (x2, y2)))
+                horiz = abs(p1[1] - p2[1]) < 1e-6
+                vert  = abs(p1[0] - p2[0]) < 1e-6
+                if not (horiz or vert):
+                    continue
 
+                # 穿越器件？
+                if segment_crosses_bbox(p1, p2, bboxes, ignore_names={name1, name2}):
+                    continue
+
+                # 穿过其他网络端点？
+                if segment_hits_other_net_point(p1, p2, all_points, coords_same_net):
+                    continue
+
+                # 通过所有过滤
+                x1, y1 = p1
+                x2, y2 = p2
+                if x1 > x2 or y1 > y2:
+                    x1, y1, x2, y2 = x2, y2, x1, y1
+                segments.append(((x1, y1), (x2, y2)))
 
         # 去除被包含的小线段
         filtered = []
@@ -240,26 +258,24 @@ def draw_net_lines(page, netlist, pin_positions, M_LINE):
             for j, (b1, b2) in enumerate(segments):
                 if i == j:
                     continue
-                # 同一方向
-                if a1[1] == a2[1] == b1[1] == b2[1]:  # 水平线
+                if a1[1] == a2[1] == b1[1] == b2[1]:  # 水平
                     if b1[0] <= a1[0] and a2[0] <= b2[0]:
                         keep = False
                         break
-                elif a1[0] == a2[0] == b1[0] == b2[0]:  # 竖直线
+                elif a1[0] == a2[0] == b1[0] == b2[0]:  # 垂直
                     if b1[1] <= a1[1] and a2[1] <= b2[1]:
                         keep = False
                         break
             if keep:
                 filtered.append((a1, a2))
 
-        # 画线
+        # 绘制
         for p1, p2 in filtered:
             line = page.Drop(M_LINE, 0, 0)
             line.CellsU("BeginX").ResultIU = p1[0]
             line.CellsU("BeginY").ResultIU = p1[1]
             line.CellsU("EndX").ResultIU   = p2[0]
             line.CellsU("EndY").ResultIU   = p2[1]
-            # line.Text = net
 
 # === 主程序 ===
 def main():
@@ -272,30 +288,32 @@ def main():
     M_NMOS    = stencil.Masters("NMOS")
     M_PMOS    = stencil.Masters("PMOS")
     M_UNKNOWN = stencil.Masters("Unknown")
-    M_LINE    = stencil.Masters("Line")  # 确认该 master 为动态连接器
+    M_LINE    = stencil.Masters("Line")
 
-    # 解析实例与网表
     instances = parse_instances(INPUT_FILE)
     netlist   = parse_netlist(NETLIST_FILE)
     pin_positions = {}
+    bboxes = {}
 
-    # 放置器件并记录引脚位置（按中心放置）
+    # 放置器件并记录 bbox
     for inst in instances.values():
+        name = inst["name"]
         if inst["type"] == "NMOS":
             drop_with_label(page, M_NMOS, inst, W_NMOS, H_NMOS, pin_positions)
+            bboxes[name] = get_bbox(inst, W_NMOS, H_NMOS)
         elif inst["type"] == "PMOS":
             drop_with_label(page, M_PMOS, inst, W_PMOS, H_PMOS, pin_positions)
+            bboxes[name] = get_bbox(inst, W_PMOS, H_PMOS)
         else:
             drop_with_label(page, M_UNKNOWN, inst, W_UNKNOWN, H_UNKNOWN, pin_positions)
+            bboxes[name] = get_bbox(inst, W_UNKNOWN, H_UNKNOWN)
 
     print("所有器件已放置完成。")
 
-    # 自动连线（仅横/竖线；排除 B 与 VSSA/VSSD）
-    draw_net_lines(page, netlist, pin_positions, M_LINE)
+    # 自动连线
+    draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes)
 
-    print("\n所有器件与连线已完成。")
+    print("所有器件与连线已完成。")
 
 if __name__ == "__main__":
     main()
-
-
