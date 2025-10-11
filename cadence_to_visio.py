@@ -102,7 +102,7 @@ def parse_netlist(filename):
                 pin_names = ["D", "G", "S", "B"]
             elif name.upper().startswith("R"):
                 dev_type = "RES"
-                pin_names = ["1", "2"]
+                pin_names = ["R_up", "R_down"]
             else:
                 dev_type = "UNKNOWN"
                 pin_names = [f"P{i+1}" for i in range(len(pins))]
@@ -119,18 +119,25 @@ def parse_netlist(filename):
 def get_pin_position(inst, pin, w, h):
     cx, cy = inst["xy"]
     orient = inst["orient"]
+
     if inst["type"] == "NMOS":
         local_map = {"D": ( w/2,  h/2), "G": (-w/2, 0), "S": ( w/2,-h/2), "B": ( w/2, 0)}
     elif inst["type"] == "PMOS":
         local_map = {"D": ( w/2,-h/2), "G": (-w/2, 0), "S": ( w/2, h/2), "B": ( w/2, 0)}
+    elif inst["type"] == "RES":
+        local_map = {"R_up": (0, h/2), "R_down": (0, -h/2)}
     else:
         return (cx, cy)
+
     if pin not in local_map:
         return (cx, cy)
+
     lx, ly = local_map[pin]
+    # 旋转/镜像处理（和 MOS 一样）
     def rotate(x, y, angle):
         cos_a, sin_a = math.cos(angle), math.sin(angle)
         return (x*cos_a - y*sin_a, x*sin_a + y*cos_a)
+
     if orient == "R0": tx, ty = lx, ly
     elif orient == "R90": tx, ty = rotate(lx, ly, math.pi/2)
     elif orient == "R180": tx, ty = rotate(lx, ly, math.pi)
@@ -140,7 +147,9 @@ def get_pin_position(inst, pin, w, h):
     elif orient == "MXR90": tx, ty = rotate(lx, -ly, math.pi/2)
     elif orient == "MYR90": tx, ty = rotate(-lx, ly, math.pi/2)
     else: tx, ty = lx, ly
+
     return (cx + tx, cy + ty)
+
 
 # === 包围盒与穿越检测 ===
 def get_bbox(inst, w, h):
@@ -316,7 +325,7 @@ def main():
             drop_with_label(page, M_PMOS, inst, W_PMOS, H_PMOS, pin_positions, ["D","G","S","B"])
             bboxes[name] = get_bbox(inst, W_PMOS, H_PMOS)
         elif inst["type"] == "RES":
-            drop_with_label(page, M_RES, inst, W_RES, H_RES, pin_positions, ["1","2"])
+            drop_with_label(page, M_RES, inst, W_RES, H_RES, pin_positions, ["R_up","R_down"])
             bboxes[name] = get_bbox(inst, W_RES, H_RES)
         else:
             drop_with_label(page, M_UNKNOWN, inst, W_UNKNOWN, H_UNKNOWN, pin_positions, [])
