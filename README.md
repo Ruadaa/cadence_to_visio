@@ -65,4 +65,6 @@
 - 本工具仅用于辅助绘图，当前仅支持 MOS 管绘制，其他器件以 `Unknown` 代替。
 - 连线部分仅根据网表生成部分横竖线，尚不支持完整布线。
 - 欢迎有兴趣的开发者继续优化与完善！
+- 
+<img width="2668" height="1479" alt="image" src="https://github.com/user-attachments/assets/f70fbcf3-91a1-43f0-843e-f017e74fdf61" />
 
