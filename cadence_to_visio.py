@@ -3,10 +3,10 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\...\inst_info.txt"
-NETLIST_FILE = r"C:\...\netlist.txt"
-STENCIL      = r"C:\...\circuit.vss"
-SCALE        = 1.5
+INPUT_FILE   = r"C:\Wangzz\20251009\inst_info.txt"
+NETLIST_FILE = r"C:\Wangzz\20251009\netlist.txt"
+STENCIL      = r"C:\Wangzz\20251009\cadence_to_visio\circuit.vss"
+SCALE        = 1
 
 # 元件尺寸
 # 元件尺寸
