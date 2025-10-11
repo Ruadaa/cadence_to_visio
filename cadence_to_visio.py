@@ -15,6 +15,10 @@ W_PMOS, H_PMOS = 0.44, 0.59
 W_RES,  H_RES  = 0.20, 0.59   # 新增电阻尺寸
 W_UNKNOWN, H_UNKNOWN = 0.25, 0.25
 
+# === 连线模式开关 ===
+STRICT_MODE = False   # False = 全连线模式；True = 严格模式
+USE_LINE    = True    # True = 使用 DrawLine；False = 使用 Dynamic Connector
+
 
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {"VDDA", "VSSA", "GNDA"}
@@ -218,8 +222,7 @@ def drop_with_label(page, master, inst, w, h, pin_positions, pin_list):
 
     return shp
 
-# === 自动绘制连线（横/竖线；排除规则；跳过 D-S；去冗余；避免穿越） ===
-def draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes):
+# def draw_net_lines(page, netlist, pin_positions, instances, bboxes):
     net_to_points = {}
     all_points = []
 
@@ -238,62 +241,171 @@ def draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes):
     # 遍历网络
     for net, pins in net_to_points.items():
         segments = []
-        coords_same_net = [pt for _, _, pt in pins]
 
-        for i in range(len(pins)):
-            for j in range(i+1, len(pins)):
-                name1, pin1, p1 = pins[i]
-                name2, pin2, p2 = pins[j]
+        if STRICT_MODE:
+            # === 严格模式：只画水平/垂直线，避免穿越 ===
+            coords_same_net = [pt for _, _, pt in pins]
+            for i in range(len(pins)):
+                for j in range(i+1, len(pins)):
+                    name1, pin1, p1 = pins[i]
+                    name2, pin2, p2 = pins[j]
 
-                # 跳过同一器件的 D-S
-                if name1 == name2 and {pin1.upper(), pin2.upper()} == {"D", "S"}:
-                    continue
+                    # 跳过同一器件的 D-S
+                    if name1 == name2 and {pin1.upper(), pin2.upper()} == {"D", "S"}:
+                        continue
 
-                horiz = abs(p1[1] - p2[1]) < 1e-6
-                vert  = abs(p1[0] - p2[0]) < 1e-6
-                if not (horiz or vert):
-                    continue
+                    horiz = abs(p1[1] - p2[1]) < 1e-6
+                    vert  = abs(p1[0] - p2[0]) < 1e-6
+                    if not (horiz or vert):
+                        continue
 
-                # 穿越器件？
-                if segment_crosses_bbox(p1, p2, bboxes, ignore_names={name1, name2}):
-                    continue
+                    if segment_crosses_bbox(p1, p2, bboxes, ignore_names={name1, name2}):
+                        continue
+                    if segment_hits_other_net_point(p1, p2, all_points, coords_same_net):
+                        continue
 
-                # 穿过其他网络端点？
-                if segment_hits_other_net_point(p1, p2, all_points, coords_same_net):
-                    continue
-
-                # 通过所有过滤
-                x1, y1 = p1
-                x2, y2 = p2
-                if x1 > x2 or y1 > y2:
-                    x1, y1, x2, y2 = x2, y2, x1, y1
-                segments.append(((x1, y1), (x2, y2)))
-
-        # 去除被包含的小线段
-        filtered = []
-        for i, (a1, a2) in enumerate(segments):
-            keep = True
-            for j, (b1, b2) in enumerate(segments):
-                if i == j:
-                    continue
-                if a1[1] == a2[1] == b1[1] == b2[1]:  # 水平
-                    if b1[0] <= a1[0] and a2[0] <= b2[0]:
-                        keep = False
-                        break
-                elif a1[0] == a2[0] == b1[0] == b2[0]:  # 垂直
-                    if b1[1] <= a1[1] and a2[1] <= b2[1]:
-                        keep = False
-                        break
-            if keep:
-                filtered.append((a1, a2))
+                    x1, y1 = p1
+                    x2, y2 = p2
+                    if x1 > x2 or y1 > y2:
+                        x1, y1, x2, y2 = x2, y2, x1, y1
+                    segments.append(((x1, y1), (x2, y2)))
+        else:
+            # === 全连线模式：所有引脚两两相连 ===
+            for i in range(len(pins)):
+                for j in range(i+1, len(pins)):
+                    _, _, p1 = pins[i]
+                    _, _, p2 = pins[j]
+                    segments.append((p1, p2))
 
         # 绘制
-        for p1, p2 in filtered:
-            line = page.Drop(M_LINE, 0, 0)
-            line.CellsU("BeginX").ResultIU = p1[0]
-            line.CellsU("BeginY").ResultIU = p1[1]
-            line.CellsU("EndX").ResultIU   = p2[0]
-            line.CellsU("EndY").ResultIU   = p2[1]
+        for p1, p2 in segments:
+            if USE_LINE:
+                # 使用普通直线
+                line = page.DrawLine(p1[0], p1[1], p2[0], p2[1])
+                line.CellsU("LineWeight").FormulaU = "1.2 pt"
+            else:
+                # 使用 Dynamic Connector
+                connector = page.Drop(page.Application.ConnectorToolDataObject, 0, 0)
+                connector.CellsU("BeginX").ResultIU = p1[0]
+                connector.CellsU("BeginY").ResultIU = p1[1]
+                connector.CellsU("EndX").ResultIU   = p2[0]
+                connector.CellsU("EndY").ResultIU   = p2[1]
+                connector.CellsU("LineWeight").FormulaU = "1.2 pt"
+                # 可选：强制直线风格
+                connector.CellsU("RouteStyle").FormulaU = "16"
+
+
+
+def build_mst(points, candidate_edges=None):
+    """Kruskal MST，candidate_edges 可选：[(dist, i, j)]"""
+    if candidate_edges is None:
+        # 默认全连线候选
+        candidate_edges = []
+        for i, p1 in enumerate(points):
+            for j, p2 in enumerate(points):
+                if i < j:
+                    dist = abs(p1[0]-p2[0]) + abs(p1[1]-p2[1])
+                    candidate_edges.append((dist, i, j))
+    candidate_edges.sort()
+
+    parent = list(range(len(points)))
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    mst = []
+    for dist, i, j in candidate_edges:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[ri] = rj
+            mst.append((points[i], points[j]))
+    return mst
+
+
+FULL_CONNECT = False   # True = 全连线（可能冗余），False = 去冗余（MST）
+
+def draw_net_lines(page, netlist, pin_positions, instances, bboxes):
+    net_to_points = {}
+
+    # 收集每个网络的点
+    for dev in netlist:
+        name = dev["name"]
+        for pin, net in dev["pins"].items():
+            if pin.upper() in EXCLUDED_PINS or net.upper() in EXCLUDED_NETS:
+                continue
+            key = name + ":" + pin
+            if key in pin_positions:
+                pt = pin_positions[key]
+                net_to_points.setdefault(net, []).append((name, pin, pt))
+
+    for net, pins in net_to_points.items():
+        if len(pins) < 2:
+            continue
+
+        coords = [pt for _, _, pt in pins]
+
+        if STRICT_MODE:
+            # 严格模式：只考虑水平/垂直且不穿越器件的 MST
+            candidate_edges = []
+            for i, (n1, pin1, c1) in enumerate(pins):
+                for j, (n2, pin2, c2) in enumerate(pins):
+                    if i < j:
+                        horiz = abs(c1[1]-c2[1]) < 1e-6
+                        vert  = abs(c1[0]-c2[0]) < 1e-6
+                        if not (horiz or vert):
+                            continue
+                        if segment_crosses_bbox(c1, c2, bboxes, ignore_names={n1, n2}):
+                            continue
+                        dist = abs(c1[0]-c2[0]) + abs(c1[1]-c2[1])
+                        candidate_edges.append((dist, i, j))
+            edges = build_mst(coords, candidate_edges)
+        else:
+            if FULL_CONNECT:
+                # 全连线：所有引脚两两相连
+                edges = []
+                for i, p1 in enumerate(coords):
+                    for j, p2 in enumerate(coords):
+                        if i < j:
+                            edges.append((p1, p2))
+            else:
+                # 去冗余：用 MST
+                edges = build_mst(coords)
+
+        # 绘制
+        for p1, p2 in edges:
+            horiz = abs(p1[1]-p2[1]) < 1e-6
+            vert  = abs(p1[0]-p2[0]) < 1e-6
+            is_manhattan = horiz or vert
+
+            if USE_LINE:
+                line = page.DrawLine(p1[0], p1[1], p2[0], p2[1])
+                if is_manhattan:
+                    line.CellsU("LineWeight").FormulaU = "1.2 pt"
+                else:
+                    line.CellsU("LineWeight").FormulaU = "1.2 pt"
+                    line.CellsU("LinePattern").FormulaU = "2"  # 虚线
+
+            else:
+                connector = page.Drop(page.Application.ConnectorToolDataObject, 0, 0)
+                connector.CellsU("BeginX").ResultIU = p1[0]
+                connector.CellsU("BeginY").ResultIU = p1[1]
+                connector.CellsU("EndX").ResultIU   = p2[0]
+                connector.CellsU("EndY").ResultIU   = p2[1]
+                if is_manhattan:
+                    connector.CellsU("LineWeight").FormulaU = "1.2 pt"
+                    connector.CellsU("RouteStyle").FormulaU = "64"  # 避让障碍物的直角折线
+                else:
+                    connector.CellsU("LineWeight").FormulaU = "0.6 pt"
+                    connector.CellsU("LinePattern").FormulaU = "2"  # 虚线
+                    connector.CellsU("ConLineRouteExt").FormulaU = "2"
+                    connector.CellsU("RouteStyle").FormulaU = "32"  # 直线
+
+    page.Layout()
+
+
+
 
 
 # === 主程序 ===
@@ -334,9 +446,36 @@ def main():
     print("所有器件已放置完成。")
 
     # 自动连线
-    draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes)
+    mode_text = "严格模式" if STRICT_MODE else "全连线模式"
+    line_text = "直线 (Line)" if USE_LINE else "动态连接线 (Connector)"
+    print(f"开始自动连线：{mode_text} + {line_text}")
+
+    draw_net_lines(page, netlist, pin_positions, instances, bboxes)
 
     print("所有器件与连线已完成。")
+
+        # 触发页面重新布局，让 Connector 避让生效
+    page.Layout()
+
+
+    # === 交互式处理虚线 ===
+    choice = input("是否要将剩余虚线改为实线？(Y/N): ").strip().lower()
+    if choice == "y":
+        for shape in page.Shapes:
+            try:
+                if shape.CellExistsU("LinePattern", 0):
+                    pattern = shape.CellsU("LinePattern").ResultIU
+                    if pattern == 2:  # 虚线
+                        shape.CellsU("LinePattern").FormulaU = "1"   # 改为实线
+                        shape.CellsU("LineWeight").FormulaU = "1.2 pt"
+            except Exception:
+                pass
+        print("已将剩余虚线改为实线。")
+    else:
+        print("保留虚线，不做修改。")
+
+
+
 
 if __name__ == "__main__":
     main()
