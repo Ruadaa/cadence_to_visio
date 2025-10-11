@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\Users\Administrator\Desktop\cadence_to_visio\inst_info.txt"
-NETLIST_FILE = r"C:\Users\Administrator\Desktop\cadence_to_visio\netlist.txt"
-STENCIL      = r"C:\Users\Administrator\Desktop\cadence_to_visio\circuit.vss"
+INPUT_FILE   = r"C:\inst_info.txt"
+NETLIST_FILE = r"C:\netlist.txt"
+STENCIL      = r"C:\circuit.vss"
 SCALE        = 2
 
 
@@ -368,3 +368,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
