@@ -60,11 +60,16 @@
 ---
 
 
+
+## 📌 test
+- 运行结果
+<img width="946" height="701" alt="image" src="https://github.com/user-attachments/assets/eb6c5c25-11cf-4cf8-b22b-ac7664d77612" />
+
+- 手动调整后，交互可将虚线变实线
+<img width="1048" height="728" alt="image" src="https://github.com/user-attachments/assets/47bb5cf7-5dd9-4d6f-bfc6-6e5e56e3d765" />
+
 ## 📌 tips
 
-- 本工具仅用于辅助绘图，当前仅支持 MOS 管绘制，其他器件以 `Unknown` 代替。
-- 连线部分仅根据网表生成部分横竖线，尚不支持完整布线。
+- 本工具仅用于辅助绘图，当前仅支持 MOS、R、C 绘制，其他器件以 `Unknown` 代替。
+- 连线根据网表生成，非全自动布线。
 - 欢迎有兴趣的开发者继续优化与完善！
-- 
-<img width="2668" height="1479" alt="image" src="https://github.com/user-attachments/assets/f70fbcf3-91a1-43f0-843e-f017e74fdf61" />
-
