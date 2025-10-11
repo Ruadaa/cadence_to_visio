@@ -3,15 +3,18 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\inst_info.txt"
-NETLIST_FILE = r"C:\netlist.txt"
-STENCIL      = r"C:\circuit.vss"
+INPUT_FILE   = r"C:\...\inst_info.txt"
+NETLIST_FILE = r"C:\...\netlist.txt"
+STENCIL      = r"C:\...\circuit.vss"
 SCALE        = 1.5
 
 # 元件尺寸
+# 元件尺寸
 W_NMOS, H_NMOS = 0.44, 0.59
 W_PMOS, H_PMOS = 0.44, 0.59
+W_RES,  H_RES  = 0.20, 0.59   # 新增电阻尺寸
 W_UNKNOWN, H_UNKNOWN = 0.25, 0.25
+
 
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {"VDDA", "VSSA", "GNDA"}
@@ -54,12 +57,17 @@ def parse_instances(filename):
         x      = float(xy_m.group(1)) * SCALE
         y      = float(xy_m.group(2)) * SCALE
         orient = orient_m.group(1)
-        if name.upper().startswith("NM"):
+
+        # === 类型识别 ===
+        if name.upper().startswith("NM") or name.upper().startswith("M"):
             dev_type = "NMOS"
         elif name.upper().startswith("PM"):
             dev_type = "PMOS"
+        elif name.upper().startswith("R"):
+            dev_type = "RES"
         else:
             dev_type = "UNKNOWN"
+
         instances[name] = {
             "name": name,
             "type": dev_type,
@@ -86,7 +94,7 @@ def parse_netlist(filename):
             pins = tokens[1:model_idx]
             model = tokens[model_idx]
             name = raw_name[1:] if raw_name.startswith("X") else raw_name
-            if name.upper().startswith("NM"):
+            if name.upper().startswith("NM") or name.upper().startswith("M"):
                 dev_type = "NMOS"
                 pin_names = ["D", "G", "S", "B"]
             elif name.upper().startswith("PM"):
@@ -173,8 +181,9 @@ def segment_hits_other_net_point(p1, p2, all_points, same_net_points):
             return True
     return False
 
+
 # === 放置器件并记录引脚位置 ===
-def drop_with_label(page, master, inst, w, h, pin_positions):
+def drop_with_label(page, master, inst, w, h, pin_positions, pin_list):
     cx, cy = inst["xy"]
     name = inst["name"]
     orient = inst["orient"]
@@ -194,8 +203,8 @@ def drop_with_label(page, master, inst, w, h, pin_positions):
     # 应用方向
     apply_orientation(shp, orient)
 
-    # 记录四个引脚的坐标
-    for pin in ["D", "G", "S", "B"]:
+    # 记录引脚坐标
+    for pin in pin_list:
         pin_positions[name + ":" + pin] = get_pin_position(inst, pin, w, h)
 
     return shp
@@ -277,6 +286,7 @@ def draw_net_lines(page, netlist, pin_positions, M_LINE, instances, bboxes):
             line.CellsU("EndX").ResultIU   = p2[0]
             line.CellsU("EndY").ResultIU   = p2[1]
 
+
 # === 主程序 ===
 def main():
     visio = win32com.client.Dispatch("Visio.Application")
@@ -287,6 +297,7 @@ def main():
     stencil = visio.Documents.OpenEx(STENCIL, 64)
     M_NMOS    = stencil.Masters("NMOS")
     M_PMOS    = stencil.Masters("PMOS")
+    M_RES     = stencil.Masters("R")        # 确认模具里电阻的 Master 名称
     M_UNKNOWN = stencil.Masters("Unknown")
     M_LINE    = stencil.Masters("Line")
 
@@ -299,13 +310,16 @@ def main():
     for inst in instances.values():
         name = inst["name"]
         if inst["type"] == "NMOS":
-            drop_with_label(page, M_NMOS, inst, W_NMOS, H_NMOS, pin_positions)
+            drop_with_label(page, M_NMOS, inst, W_NMOS, H_NMOS, pin_positions, ["D","G","S","B"])
             bboxes[name] = get_bbox(inst, W_NMOS, H_NMOS)
         elif inst["type"] == "PMOS":
-            drop_with_label(page, M_PMOS, inst, W_PMOS, H_PMOS, pin_positions)
+            drop_with_label(page, M_PMOS, inst, W_PMOS, H_PMOS, pin_positions, ["D","G","S","B"])
             bboxes[name] = get_bbox(inst, W_PMOS, H_PMOS)
+        elif inst["type"] == "RES":
+            drop_with_label(page, M_RES, inst, W_RES, H_RES, pin_positions, ["1","2"])
+            bboxes[name] = get_bbox(inst, W_RES, H_RES)
         else:
-            drop_with_label(page, M_UNKNOWN, inst, W_UNKNOWN, H_UNKNOWN, pin_positions)
+            drop_with_label(page, M_UNKNOWN, inst, W_UNKNOWN, H_UNKNOWN, pin_positions, [])
             bboxes[name] = get_bbox(inst, W_UNKNOWN, H_UNKNOWN)
 
     print("所有器件已放置完成。")
