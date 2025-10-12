@@ -51,10 +51,12 @@
 ## 🚀 使用方法
 
 1. 准备好 `netlist.txt` 和 `inst_info.txt`。
+  
 2. 运行主脚本：
    ```bash
    python candence_to_visio_V2.py
    ```
+   
 3. 脚本将自动解析网表与坐标信息，并在 Visio 中生成图形化布局。
 
 ---
