@@ -62,11 +62,13 @@
 
 
 ## 📌 test
-- 运行结果
-<img width="946" height="701" alt="image" src="https://github.com/user-attachments/assets/eb6c5c25-11cf-4cf8-b22b-ac7664d77612" />
+- 运行
+![alt text](image.png)
+
+
 
 - 手动调整后，交互可将虚线变实线
-<img width="1048" height="728" alt="image" src="https://github.com/user-attachments/assets/47bb5cf7-5dd9-4d6f-bfc6-6e5e56e3d765" />
+![alt text](image-1.png)
 
 ## 📌 tips
 

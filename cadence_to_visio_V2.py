@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\inst_info.txt"
-NETLIST_FILE = r"C:\netlist.txt"
-STENCIL      = r"C:\circuit.vss"
+INPUT_FILE   = r"inst_info.txt"
+NETLIST_FILE = r"netlist.txt"
+STENCIL      = r"circuit.vss"
 SCALE        = 2  # 坐标缩放倍数
 
 
