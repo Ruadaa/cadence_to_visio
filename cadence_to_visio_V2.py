@@ -8,7 +8,7 @@ NETLIST_FILE = r"netlist.txt"
 STENCIL      = r"circuit.vss"
 SCALE        = 2  # 坐标缩放倍数
 
-
+#推送
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {}
 EXCLUDED_PINS = {"B"}
