@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\Wangzz\cadence_to_visio\inst_info.txt"
-NETLIST_FILE = r"C:\Wangzz\cadence_to_visio\netlist.txt"
-STENCIL      = r"C:\Wangzz\cadence_to_visio\circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
+INPUT_FILE   = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\inst_info.txt"
+NETLIST_FILE = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\netlist.txt"
+STENCIL      = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
 SCALE        = 2  # 坐标缩放倍数
 
 # 不参与连线的网络与引脚
@@ -21,12 +21,12 @@ BUS_NETS = {
         "label": "VDDA"
     },
     "VSSA": {
-        "enabled": True,  
+        "enabled": False,  
         "color": "RGB(0,0,255)",
         "label": "VSSA"
     },
     "GNDA": {
-        "enabled": False,  # 不启用该总线
+        "enabled": True,  # 不启用该总线
         "color": "RGB(0,255,0)",
         "label": "GNDA"
     }
@@ -81,19 +81,19 @@ DEVICE_LIBRARY = {
         }
     },
     # === 新增 Unknown 器件 ===
-    "UNKNOWN": {
-        "inst_prefix": [],
-        "netlist_prefix": [],
-        "master_name": "Unknown",  
-        "size": (0.43, 0.43),
-        "pins": {
-            "P1": (0.0, 0.5),
-            "P2": (0.0, -0.5),
-            "P3": (0.5, 0),
-            "P4": (-0.5, 0),
-            "P5": (0.0, 0)
-        }
-    }
+    # "UNKNOWN": {
+    #     "inst_prefix": [],
+    #     "netlist_prefix": [],
+    #     "master_name": "Unknown",  
+    #     "size": (0.43, 0.43),
+    #     "pins": {
+    #         "P1": (0.0, 0.5),
+    #         "P2": (0.0, -0.5),
+    #         "P3": (0.5, 0),
+    #         "P4": (-0.5, 0),
+    #         "P5": (0.0, 0)
+    #     }
+    # }
     # 以后你可以自己加新器件
 }
 
@@ -370,7 +370,8 @@ def draw_net_lines(page, netlist, pin_positions, instances_map, bboxes):
             horiz = abs(p1[1]-p2[1]) < 1e-6
             vert  = abs(p1[0]-p2[0]) < 1e-6
 
-            line = page.Drop(page.Application.ConnectorToolDataObject, 0, 0)
+            # line = page.Drop(page.Application.ConnectorToolDataObject, 0, 0)
+            line = page.DrawLine(p1[0], p1[1], p2[0], p2[1])
             line.CellsU("ConFixedCode").FormulaU = "3"
             line.CellsU("LineWeight").FormulaU = "1.2 pt"
 
@@ -407,7 +408,6 @@ def draw_net_lines(page, netlist, pin_positions, instances_map, bboxes):
                                 line.CellsU(f"{end}Y").GlueTo(conn_y)
                             except Exception as e:
                                 print(f"[Glue] {dev}:{pin} 失败: {e}")
-
 
 
 # === 主程序 ===
