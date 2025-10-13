@@ -21,12 +21,12 @@ BUS_NETS = {
         "label": "VDDA"
     },
     "VSSA": {
-        "enabled": False,  
+        "enabled": True,  
         "color": "RGB(0,0,255)",
         "label": "VSSA"
     },
     "GNDA": {
-        "enabled": True,  # 不启用该总线
+        "enabled": False,  # 不启用该总线
         "color": "RGB(0,255,0)",
         "label": "GNDA"
     }
