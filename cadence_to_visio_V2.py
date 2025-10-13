@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\inst_info.txt"
-NETLIST_FILE = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\netlist.txt"
-STENCIL      = r"C:\Users\Administrator\Desktop\Cad_to_visio\cadence_to_visio\circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
+INPUT_FILE   = r"inst_info.txt"
+NETLIST_FILE = r"netlist.txt"
+STENCIL      = r"circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
 SCALE        = 2  # 坐标缩放倍数
 
 # 不参与连线的网络与引脚
