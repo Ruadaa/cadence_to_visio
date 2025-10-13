@@ -27,7 +27,7 @@ BUS_NETS = {
     },
     "GNDA": {
         "enabled": False,  # 不启用该总线
-        "color": "RGB(0,128,0)",
+        "color": "RGB(0,255,0)",
         "label": "GNDA"
     }
 }
