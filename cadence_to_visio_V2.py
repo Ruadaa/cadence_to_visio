@@ -6,7 +6,7 @@ import math
 INPUT_FILE   = r"inst_info.txt"
 NETLIST_FILE = r"netlist.txt"
 STENCIL      = r"circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
-SCALE        = 2  # 坐标缩放倍数
+SCALE        = 1  # 坐标缩放倍数
 
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {}
