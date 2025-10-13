@@ -8,7 +8,6 @@ NETLIST_FILE = r"C:\Wangzz\cadence_to_visio\netlist.txt"
 STENCIL      = r"C:\Wangzz\cadence_to_visio\circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
 SCALE        = 2  # 坐标缩放倍数
 
-
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {}
 EXCLUDED_PINS = {"B"}
