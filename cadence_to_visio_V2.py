@@ -11,6 +11,7 @@ SCALE        = 2  # 坐标缩放倍数
 # 不参与连线的网络与引脚
 EXCLUDED_NETS = {}
 EXCLUDED_PINS = {"B"}
+
 # === 总线配置 ===
 #这里电源和地线要改为网表中电源和地线的名称，电路没有电源和地就手动"enabled": False
 BUS_NETS = {
