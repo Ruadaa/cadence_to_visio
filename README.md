@@ -62,14 +62,13 @@
 
 
 ## 📌 test
-- 运行
-  
-![alt text](image.png)
+- 运行并手动调整
 
-- 手动调整后，交互可将虚线变实线
-  
+![alt text](image-4.png)
+
+- 交互并改为实线
 ![alt text](image-1.png)
-
+![alt text](image-3.png)
 ## 📌 tips
 
 - 本工具仅用于辅助绘图，当前仅支持 MOS、R、C 绘制，其他器件以 `Unknown` 代替。
