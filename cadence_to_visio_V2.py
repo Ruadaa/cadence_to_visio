@@ -3,9 +3,9 @@ import win32com.client
 import math
 
 # === 配置 ===
-INPUT_FILE   = r"inst_info.txt"
-NETLIST_FILE = r"netlist.txt"
-STENCIL      = r"circuit.vss"
+INPUT_FILE   = r"C:\Wangzz\cadence_to_visio\inst_info.txt"
+NETLIST_FILE = r"C:\Wangzz\cadence_to_visio\netlist.txt"
+STENCIL      = r"C:\Wangzz\cadence_to_visio\circuit.vss"  #这里要写circuit.vss的绝对路径，模具只能用这个
 SCALE        = 2  # 坐标缩放倍数
 
 
@@ -13,6 +13,7 @@ SCALE        = 2  # 坐标缩放倍数
 EXCLUDED_NETS = {}
 EXCLUDED_PINS = {"B"}
 # === 总线配置 ===
+#这里电源和地线要改为网表中电源和地线的名称，电路没有电源和地就手动"enabled": False
 BUS_NETS = {
     "VDDA": {
         "enabled": True,
