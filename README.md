@@ -66,7 +66,7 @@
 
 ![alt text](image-4.png)
 
-- 交互并改为实线
+- 交互改为实线
 
 ![alt text](image-1.png)
 ![alt text](image-3.png)
