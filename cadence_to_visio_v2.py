@@ -126,9 +126,11 @@ def collect_pin_candidates(
     shapes: Dict[str, object],
     coord: core.CoordMap,
     excluded_pins: Set[str],
+    config: Optional[core.DeviceMappingConfig] = None,
 ) -> Dict[str, List[PinGlueCandidate]]:
     """读取每个器件 master 的 Connections.Xn/Yn，建立 pin 候选表。"""
 
+    po = config.pin_order if config else core.DEVICE_PIN_ORDER
     candidates_by_net: Dict[str, List[PinGlueCandidate]] = {}
     for device in devices:
         inst = instances.get(device.name)
@@ -136,7 +138,7 @@ def collect_pin_candidates(
         if inst is None or shape is None:
             continue
 
-        pin_order = core.DEVICE_PIN_ORDER.get(inst.dev_type, [])
+        pin_order = po.get(inst.dev_type, [])
         for pin, net in device.pins.items():
             if core.pin_is_excluded(inst.dev_type, pin, excluded_pins) or pin not in pin_order:
                 continue
@@ -169,6 +171,7 @@ def build_pin_targets(
     coord: core.CoordMap,
     threshold: float,
     excluded_pins: Set[str],
+    config: Optional[core.DeviceMappingConfig] = None,
 ) -> Tuple[Dict[EndpointKey, PinGlueInfo], int]:
     """匹配 wire endpoint 与器件 pin。
 
@@ -176,7 +179,9 @@ def build_pin_targets(
     会被跳过，避免 Visio 把原始线段端点拉到器件 pin 导致斜线/变形。
     """
 
-    candidates_by_net = collect_pin_candidates(page, devices, instances, shapes, coord, excluded_pins)
+    candidates_by_net = collect_pin_candidates(
+        page, devices, instances, shapes, coord, excluded_pins, config=config,
+    )
     targets: Dict[EndpointKey, PinGlueInfo] = {}
     skipped_noncoincident = 0
 
@@ -407,6 +412,7 @@ def draw_visio(
     coord: core.CoordMap,
     excluded_pins: Set[str],
     placement_offsets: Sequence[core.PlacementOffsetRule],
+    config: Optional[core.DeviceMappingConfig] = None,
 ) -> None:
     try:
         import win32com.client
@@ -438,6 +444,7 @@ def draw_visio(
             args.symbol_fit,
             placement_offsets,
             draw_label=False,
+            config=config,
         )
 
     if args.wire_adjust == "snap-endpoints":
@@ -451,6 +458,7 @@ def draw_visio(
             args.pin_snap_threshold,
             excluded_pins,
             placement_offsets,
+            config=config,
         )
         core.write_wires_xlsx(args.adjusted_wires_output, wires)
         core.write_adjustments_tsv(args.adjustment_report, adjustments)
@@ -466,6 +474,7 @@ def draw_visio(
             coord,
             args.pin_snap_threshold,
             excluded_pins,
+            config=config,
         )
     else:
         pin_targets = {}
@@ -517,6 +526,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--inst-info", default=core.DEFAULT_INST_INFO_FILE, help="器件坐标/方向信息")
     parser.add_argument("--stencil", default=core.DEFAULT_STENCIL_FILE, help="Visio stencil 文件")
     parser.add_argument("--placement-offsets", default=core.DEFAULT_PLACEMENT_OFFSETS_FILE, help="可选器件偏移表")
+    parser.add_argument("--device-mapping", default=core.DEFAULT_DEVICE_MAPPING_FILE, help="器件映射配置文件 (TOML)")
     parser.add_argument("--scale", type=float, default=1.0, help="全局缩放")
     parser.add_argument("--symbol-fit", choices=core.SYMBOL_FIT_MODES, default="native", help="器件 master 缩放方式")
     parser.add_argument("--wire-adjust", choices=("none", "snap-endpoints"), default="none", help="是否微调悬空端点")
@@ -559,8 +569,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    instances = core.parse_instances(args.inst_info)
-    devices = core.parse_netlist(args.netlist, instances)
+
+    # 加载器件映射配置
+    config = core.load_device_mapping(args.device_mapping)
+    if args.device_mapping and os.path.exists(args.device_mapping):
+        print(f"已加载器件映射配置：{args.device_mapping}")
+
+    instances = core.parse_instances(args.inst_info, config=config)
+    devices = core.parse_netlist(args.netlist, instances, config=config)
     wires = core.read_wires_xlsx(args.wires)
     placement_offsets = core.parse_placement_offsets(args.placement_offsets)
 
@@ -569,7 +585,7 @@ def main() -> None:
 
     skip_nets = core.parse_net_set(args.skip_nets)
     if args.skip_mos_body_nets:
-        body_nets = core.mos_body_nets(devices)
+        body_nets = core.mos_body_nets(devices, config=config)
         skip_nets.update(body_nets)
         print(f"MOS B net：{', '.join(sorted(body_nets)) if body_nets else '(none)'}")
 
@@ -613,7 +629,7 @@ def main() -> None:
     if not args.draw_mos_b_wires:
         excluded_pins.add("MOS:B")
 
-    draw_visio(instances, devices, wires, args, coord, excluded_pins, placement_offsets)
+    draw_visio(instances, devices, wires, args, coord, excluded_pins, placement_offsets, config=config)
 
 
 if __name__ == "__main__":

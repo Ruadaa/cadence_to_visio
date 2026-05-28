@@ -1,0 +1,157 @@
+# device_mapping.toml — 器件映射配置
+# 控制从 Virtuoso 网表器件到 Visio stencil (circuit.vss) 的映射规则。
+# 留空或不提供此文件时，程序使用内置默认值。
+#
+# 通配符语法（name_pattern / cell_pattern）：
+#   NM*            — 前缀匹配（以 NM 开头）
+#   *nmos*         — 包含匹配（包含 nmos 子串）
+#   nud18ll_ckt    — 精确匹配
+#   多个模式用逗号分隔，任一命中即匹配
+
+# ============================================================
+# 器件分类规则（按顺序匹配，首条命中即返回 dev_type）
+# ============================================================
+
+[[classify_rules]]
+name_pattern = "NM*"
+cell_pattern = "nud*, *nmos*, *nch*"
+dev_type = "NMOS"
+
+[[classify_rules]]
+name_pattern = "PM*"
+cell_pattern = "pud*, *pmos*, *pch*"
+dev_type = "PMOS"
+
+[[classify_rules]]
+cell_pattern = "*npn*"
+dev_type = "NPN"
+
+[[classify_rules]]
+cell_pattern = "*pnp*"
+dev_type = "PNP"
+
+[[classify_rules]]
+name_pattern = "R*"
+cell_pattern = "res, r, *res*"
+dev_type = "RES"
+
+[[classify_rules]]
+name_pattern = "C*"
+cell_pattern = "cap, c, *cap*"
+dev_type = "CAP"
+
+[[classify_rules]]
+name_pattern = "PIN*"
+cell_pattern = "ipin, opin, iopin"
+dev_type = "PIN"
+
+# --- 扩展示例：取消注释以启用 ---
+# [[classify_rules]]
+# name_pattern = "INV*, I*"
+# cell_pattern = "inv*, *inverter*"
+# dev_type = "INV"
+
+# [[classify_rules]]
+# cell_pattern = "*diode*, Diode1, Diode2"
+# dev_type = "DIODE"
+
+# [[classify_rules]]
+# cell_pattern = "*buffer*, buf*"
+# dev_type = "BUF"
+
+# ============================================================
+# Visio stencil master 候选（按优先级排序，不区分大小写）
+# ============================================================
+
+[master_candidates]
+NMOS = ["NMOS", "nmos", "nud18ll_ckt", "n25ll_ckt"]
+PMOS = ["PMOS", "pmos", "pud18ll_ckt", "p25ll_ckt"]
+NPN  = ["NPN", "npn", "npn25", "npn25a25ll_ckt"]
+PNP  = ["PNP", "pnp", "pnp25", "pnp25a25ll_ckt"]
+RES  = ["R", "RES", "res", "rpposab_2t_ckt"]
+CAP  = ["C", "CAP", "cap"]
+PIN  = ["PIN", "pin", "ipin", "opin", "iopin", "input", "output", "io"]
+UNKNOWN = ["Unknown", "UNKNOWN"]
+
+# 新类型示例：
+# INV = ["Inverter", "INV", "inv"]
+# DIODE = ["Diode1", "Diode2", "Diode", "DIODE", "diode"]
+# BUF = ["Buffer", "BUF", "buffer"]
+
+# ============================================================
+# Pin 名称顺序（决定 netlist 解析和 Visio connection point 编号）
+# ============================================================
+
+[pin_order]
+NMOS = ["D", "G", "S", "B"]
+PMOS = ["D", "G", "S", "B"]
+NPN  = ["B", "E", "C"]
+PNP  = ["B", "E", "C"]
+RES  = ["R_up", "R_down"]
+CAP  = ["C_up", "C_down"]
+
+# 新类型示例：
+# INV  = ["A", "Y"]
+# DIODE = ["A", "K"]
+# BUF  = ["A", "Y"]
+
+# ============================================================
+# Pin 相对位置（单位：器件宽高的一半）
+# ============================================================
+
+[pin_hints.NMOS]
+D = [0.5, 0.5]
+G = [-0.5, 0.0]
+S = [0.5, -0.5]
+B = [0.5, 0.0]
+
+[pin_hints.PMOS]
+D = [0.5, -0.5]
+G = [-0.5, 0.0]
+S = [0.5, 0.5]
+B = [0.5, 0.0]
+
+[pin_hints.NPN]
+B = [-0.5, 0.0]
+E = [0.5, -0.5]
+C = [0.5, 0.5]
+
+[pin_hints.PNP]
+B = [-0.5, 0.0]
+E = [0.5, -0.5]
+C = [0.5, 0.5]
+
+[pin_hints.RES]
+R_up = [0.0, 0.5]
+R_down = [0.0, -0.5]
+
+[pin_hints.CAP]
+C_up = [0.0, 0.5]
+C_down = [0.0, -0.5]
+
+# 新类型示例：
+# [pin_hints.INV]
+# A = [-0.5, 0.0]
+# Y = [0.5, 0.0]
+
+# ============================================================
+# Visio 锚点偏移类型
+# left_center   — 锚点在左边缘中心（适用于 MOS/BJT 等横向器件）
+# bottom_center — 锚点在底部中心（适用于 RES/CAP 等纵向器件）
+# none          — 无偏移
+# ============================================================
+
+[anchor_type]
+NMOS = "left_center"
+PMOS = "left_center"
+NPN  = "left_center"
+PNP  = "left_center"
+RES  = "bottom_center"
+CAP  = "bottom_center"
+PIN  = "none"
+UNKNOWN = "none"
+
+# 新类型示例：
+# INV = "none"
+# DIODE = "none"
+# BUF = "none"
