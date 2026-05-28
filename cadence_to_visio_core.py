@@ -21,6 +21,7 @@ DEFAULT_NETLIST_FILE = "netlist.txt"
 DEFAULT_INST_INFO_FILE = "inst_info.txt"
 DEFAULT_STENCIL_FILE = "circuit.vss"
 DEFAULT_PLACEMENT_OFFSETS_FILE = "placement_offsets.tsv"
+DEFAULT_DEVICE_MAPPING_FILE = "device_mapping.toml"
 
 WIRE_COLOR = "RGB(0,0,0)"
 WIRE_WEIGHT = "1.1 pt"
@@ -81,6 +82,24 @@ class PlacementOffsetRule:
     target: str
     dx: float
     dy: float
+
+
+@dataclass
+class ClassifyRule:
+    """单条器件分类规则。"""
+    name_patterns: List[Tuple[str, str]]   # [(mode, value), ...]  mode: startswith/endswith/contains/exact
+    cell_patterns: List[Tuple[str, str]]
+    dev_type: str
+
+
+@dataclass
+class DeviceMappingConfig:
+    """器件映射配置，整合从网表器件到 Visio stencil 的所有映射表。"""
+    classify_rules: List[ClassifyRule]
+    master_candidates: Dict[str, List[str]]
+    pin_order: Dict[str, List[str]]
+    pin_hints: Dict[str, Dict[str, Tuple[float, float]]]
+    anchor_type: Dict[str, str]  # "left_center" | "bottom_center" | "none"
 
 
 @dataclass
@@ -222,7 +241,197 @@ PIN_HINTS = {
 }
 
 
-def classify_device(name: str, cell: str = "") -> str:
+# ---------------------------------------------------------------------------
+# 器件映射配置加载
+# ---------------------------------------------------------------------------
+
+def _compile_pattern(pattern_str: str) -> List[Tuple[str, str]]:
+    """将通配符模式字符串解析为匹配规则列表。
+
+    语法：NM* = 前缀, *nmos* = 包含, nud18ll_ckt = 精确，逗号分隔多模式。
+    返回 [(mode, value), ...]，mode 为 startswith/endswith/contains/exact。
+    """
+    rules: List[Tuple[str, str]] = []
+    for token in pattern_str.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if token.startswith("*") and token.endswith("*") and len(token) > 2:
+            rules.append(("contains", token[1:-1]))
+        elif token.startswith("*"):
+            rules.append(("endswith", token[1:]))
+        elif token.endswith("*"):
+            rules.append(("startswith", token[:-1]))
+        else:
+            rules.append(("exact", token))
+    return rules
+
+
+def _match_pattern(text: str, patterns: Sequence[Tuple[str, str]]) -> bool:
+    """检查 text 是否匹配任一模式（不区分大小写）。"""
+    lower = text.lower()
+    upper = text.upper()
+    for mode, value in patterns:
+        if mode == "startswith" and upper.startswith(value.upper()):
+            return True
+        if mode == "endswith" and upper.endswith(value.upper()):
+            return True
+        if mode == "contains" and value.lower() in lower:
+            return True
+        if mode == "exact" and lower == value.lower():
+            return True
+    return False
+
+
+def _build_default_device_mapping() -> DeviceMappingConfig:
+    """从内置硬编码常量构建默认配置。"""
+    classify_rules = [
+        ClassifyRule(
+            name_patterns=_compile_pattern("NM*"),
+            cell_patterns=_compile_pattern("nud*, *nmos*, *nch*"),
+            dev_type="NMOS",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern("PM*"),
+            cell_patterns=_compile_pattern("pud*, *pmos*, *pch*"),
+            dev_type="PMOS",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern(""),
+            cell_patterns=_compile_pattern("*npn*"),
+            dev_type="NPN",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern(""),
+            cell_patterns=_compile_pattern("*pnp*"),
+            dev_type="PNP",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern("R*"),
+            cell_patterns=_compile_pattern("res, r, *res*"),
+            dev_type="RES",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern("C*"),
+            cell_patterns=_compile_pattern("cap, c, *cap*"),
+            dev_type="CAP",
+        ),
+        ClassifyRule(
+            name_patterns=_compile_pattern("PIN*"),
+            cell_patterns=_compile_pattern("ipin, opin, iopin"),
+            dev_type="PIN",
+        ),
+    ]
+
+    # 从现有常量推导 anchor_type
+    _LEFT_CENTER_TYPES = {"NMOS", "PMOS", "NPN", "PNP"}
+    _BOTTOM_CENTER_TYPES = {"RES", "CAP"}
+    anchor_type: Dict[str, str] = {}
+    for dt in set(list(DEVICE_PIN_ORDER.keys()) + list(MASTER_CANDIDATES.keys())):
+        if dt in _LEFT_CENTER_TYPES:
+            anchor_type[dt] = "left_center"
+        elif dt in _BOTTOM_CENTER_TYPES:
+            anchor_type[dt] = "bottom_center"
+        else:
+            anchor_type[dt] = "none"
+
+    return DeviceMappingConfig(
+        classify_rules=classify_rules,
+        master_candidates=dict(MASTER_CANDIDATES),
+        pin_order=dict(DEVICE_PIN_ORDER),
+        pin_hints={k: dict(v) for k, v in PIN_HINTS.items()},
+        anchor_type=anchor_type,
+    )
+
+
+def load_device_mapping(path: str = "") -> DeviceMappingConfig:
+    """加载器件映射配置文件。
+
+    如果 path 为空或文件不存在，返回内置默认配置。
+    如果文件存在但只配置了部分字段，缺失字段使用默认值。
+    """
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+
+    defaults = _build_default_device_mapping()
+
+    if not path or not os.path.exists(path):
+        return defaults
+
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+
+    # classify_rules: 用户配置完全替换
+    user_rules: List[ClassifyRule] = []
+    for rule_data in data.get("classify_rules", []):
+        name_str = rule_data.get("name_pattern", "")
+        cell_str = rule_data.get("cell_pattern", "")
+        dev_type = rule_data.get("dev_type", "")
+        if not dev_type:
+            continue
+        user_rules.append(ClassifyRule(
+            name_patterns=_compile_pattern(name_str),
+            cell_patterns=_compile_pattern(cell_str),
+            dev_type=dev_type,
+        ))
+
+    # master_candidates: 用户键覆盖默认键
+    mc = dict(defaults.master_candidates)
+    for k, v in data.get("master_candidates", {}).items():
+        mc[k] = v
+
+    # pin_order: deep merge
+    po = dict(defaults.pin_order)
+    for k, v in data.get("pin_order", {}).items():
+        po[k] = v
+
+    # pin_hints: deep merge
+    ph: Dict[str, Dict[str, Tuple[float, float]]] = {}
+    for dt, hints in defaults.pin_hints.items():
+        ph[dt] = dict(hints)
+    for dt, hints in data.get("pin_hints", {}).items():
+        ph.setdefault(dt, {})
+        for pin, coords in hints.items():
+            ph[dt][pin] = (coords[0], coords[1])
+
+    # anchor_type: 用户键覆盖默认键
+    at = dict(defaults.anchor_type)
+    for k, v in data.get("anchor_type", {}).items():
+        at[k] = v
+
+    return DeviceMappingConfig(
+        classify_rules=user_rules if user_rules else defaults.classify_rules,
+        master_candidates=mc,
+        pin_order=po,
+        pin_hints=ph,
+        anchor_type=at,
+    )
+
+
+def classify_device(name: str, cell: str = "", config: Optional[DeviceMappingConfig] = None) -> str:
+    """根据器件名和 cell 名推断器件类型。
+
+    传入 config 时按配置规则匹配，否则使用内置硬编码逻辑（向后兼容）。
+    """
+    if config is not None:
+        for rule in config.classify_rules:
+            name_hit = bool(rule.name_patterns) and _match_pattern(name, rule.name_patterns)
+            cell_hit = bool(rule.cell_patterns) and _match_pattern(cell, rule.cell_patterns)
+            # name_pattern 和 cell_pattern 至少有一个非空且命中即算匹配
+            if rule.name_patterns and rule.cell_patterns:
+                if name_hit or cell_hit:
+                    return rule.dev_type
+            elif rule.name_patterns:
+                if name_hit:
+                    return rule.dev_type
+            elif rule.cell_patterns:
+                if cell_hit:
+                    return rule.dev_type
+        return "UNKNOWN"
+
+    # 无 config 时的原始硬编码逻辑
     upper_name = name.upper()
     lower_cell = cell.lower()
 
@@ -243,11 +452,12 @@ def classify_device(name: str, cell: str = "") -> str:
     return "UNKNOWN"
 
 
-def infer_netlist_device_type(name: str, tokens: Sequence[str], instances: Dict[str, Instance]) -> str:
+def infer_netlist_device_type(name: str, tokens: Sequence[str], instances: Dict[str, Instance],
+                               config: Optional[DeviceMappingConfig] = None) -> str:
     if name in instances:
         return instances[name].dev_type
 
-    dev_type = classify_device(name)
+    dev_type = classify_device(name, config=config)
     if dev_type != "UNKNOWN":
         return dev_type
 
@@ -270,7 +480,7 @@ def infer_netlist_device_type(name: str, tokens: Sequence[str], instances: Dict[
         if not looks_like_model:
             continue
 
-        dev_type = classify_device(name, token)
+        dev_type = classify_device(name, token, config=config)
         if dev_type != "UNKNOWN":
             return dev_type
 
@@ -289,7 +499,7 @@ def pin_is_excluded(dev_type: str, pin: str, excluded_pins: Set[str]) -> bool:
     return False
 
 
-def parse_instances(path: str) -> Dict[str, Instance]:
+def parse_instances(path: str, config: Optional[DeviceMappingConfig] = None) -> Dict[str, Instance]:
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
@@ -315,7 +525,7 @@ def parse_instances(path: str) -> Dict[str, Instance]:
             xy=(float(xy_m.group(1)), float(xy_m.group(2))),
             orient=orient_m.group(1),
             bbox=bbox,
-            dev_type=classify_device(name, cell),
+            dev_type=classify_device(name, cell, config=config),
         )
     return instances
 
@@ -333,8 +543,10 @@ def netlist_instance_name(raw_name: str, instances: Dict[str, Instance]) -> str:
     return candidates[-1]
 
 
-def parse_netlist(path: str, instances: Dict[str, Instance]) -> List[NetDevice]:
+def parse_netlist(path: str, instances: Dict[str, Instance],
+                   config: Optional[DeviceMappingConfig] = None) -> List[NetDevice]:
     devices: List[NetDevice] = []
+    po = config.pin_order if config else DEVICE_PIN_ORDER
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         for raw_line in f:
             line = raw_line.strip()
@@ -344,9 +556,9 @@ def parse_netlist(path: str, instances: Dict[str, Instance]) -> List[NetDevice]:
             tokens = line.split()
             raw_name = tokens[0]
             name = netlist_instance_name(raw_name, instances)
-            dev_type = infer_netlist_device_type(name, tokens, instances)
+            dev_type = infer_netlist_device_type(name, tokens, instances, config=config)
 
-            pin_names = DEVICE_PIN_ORDER.get(dev_type)
+            pin_names = po.get(dev_type)
             if pin_names is None:
                 pin_count = max(2, len(tokens) - 2)
                 pin_names = [f"P{i + 1}" for i in range(pin_count)]
@@ -483,10 +695,22 @@ def placement_offset(inst: Instance, rules: Sequence[PlacementOffsetRule] = ()) 
     return (dx, dy)
 
 
-def visio_anchor_to_center_shift(inst: Instance, actual_width: float, actual_height: float) -> Point:
-    if inst.dev_type in {"NMOS", "PMOS", "NPN", "PNP"}:
+def visio_anchor_to_center_shift(inst: Instance, actual_width: float, actual_height: float,
+                                   config: Optional[DeviceMappingConfig] = None) -> Point:
+    if config is not None:
+        at = config.anchor_type.get(inst.dev_type, "none")
+    else:
+        # 无 config 时保留原始硬编码逻辑
+        if inst.dev_type in {"NMOS", "PMOS", "NPN", "PNP"}:
+            at = "left_center"
+        elif inst.dev_type in {"RES", "CAP"}:
+            at = "bottom_center"
+        else:
+            at = "none"
+
+    if at == "left_center":
         base_dx, base_dy = (actual_width / 2, 0.0)
-    elif inst.dev_type in {"RES", "CAP"}:
+    elif at == "bottom_center":
         base_dx, base_dy = (0.0, -actual_height / 2)
     else:
         return (0.0, 0.0)
@@ -555,8 +779,10 @@ def expected_pin_point(
     inst: Instance,
     pin: str,
     placement_offsets: Sequence[PlacementOffsetRule] = (),
+    config: Optional[DeviceMappingConfig] = None,
 ) -> Point:
-    hints = PIN_HINTS.get(inst.dev_type, {})
+    ph = config.pin_hints if config else PIN_HINTS
+    hints = ph.get(inst.dev_type, {})
     rx, ry = hints.get(pin, (0.0, 0.0))
     cx, cy = placement_center(inst, placement_offsets)
     width, height = instance_size(inst)
@@ -649,14 +875,18 @@ def build_master_index(stencil) -> Dict[str, object]:
     return masters
 
 
-def find_master(master_index: Dict[str, object], inst: Instance):
-    candidates = [inst.cell, inst.name]
-    candidates.extend(MASTER_CANDIDATES.get(inst.dev_type, []))
-    candidates.extend(MASTER_CANDIDATES["UNKNOWN"])
+def find_master(master_index: Dict[str, object], inst: Instance,
+                 config: Optional[DeviceMappingConfig] = None):
+    mc = config.master_candidates if config else MASTER_CANDIDATES
+    # dev_type 候选优先于实例名，避免实例名（如 M2）意外匹配 stencil master
+    candidates = list(mc.get(inst.dev_type, []))
+    candidates.extend([inst.cell, inst.name])
+    candidates.extend(mc.get("UNKNOWN", ["Unknown", "UNKNOWN"]))
     for candidate in candidates:
         master = master_index.get(candidate.lower())
         if master is not None:
             return master
+    print(f"  WARNING: no stencil master found for {inst.name} (type={inst.dev_type}, cell={inst.cell})")
     return None
 
 
@@ -728,13 +958,14 @@ def draw_instance(
     symbol_fit: str,
     placement_offsets: Sequence[PlacementOffsetRule] = (),
     draw_label: bool = True,
+    config: Optional[DeviceMappingConfig] = None,
 ):
     cx, cy = coord.point(placement_center(inst, placement_offsets))
     width, height = instance_size(inst)
     bbox_w = coord.size(width)
     bbox_h = coord.size(height)
 
-    master = find_master(master_index, inst)
+    master = find_master(master_index, inst, config=config)
     if master is None:
         shape = draw_fallback_instance(page, inst, (cx, cy), bbox_w, bbox_h)
         if draw_label:
@@ -751,7 +982,7 @@ def draw_instance(
     shape.CellsU("TxtHeight").ResultIU = DEVICE_TEXT_HEIGHT
     actual_width = float(shape.CellsU("Width").ResultIU)
     actual_height = float(shape.CellsU("Height").ResultIU)
-    shift_x, shift_y = visio_anchor_to_center_shift(inst, actual_width, actual_height)
+    shift_x, shift_y = visio_anchor_to_center_shift(inst, actual_width, actual_height, config=config)
     if shift_x or shift_y:
         shape.CellsU("PinX").ResultIU = float(shape.CellsU("PinX").ResultIU) + shift_x
         shape.CellsU("PinY").ResultIU = float(shape.CellsU("PinY").ResultIU) + shift_y
@@ -893,10 +1124,14 @@ def filter_wires_by_net(wires: Sequence[WireSegment], skip_nets: Set[str]) -> Tu
     return kept, len(wires) - len(kept)
 
 
-def mos_body_nets(devices: Sequence[NetDevice]) -> Set[str]:
+def mos_body_nets(devices: Sequence[NetDevice],
+                   config: Optional[DeviceMappingConfig] = None) -> Set[str]:
+    # 查找含有 "B" pin 的器件类型
+    po = config.pin_order if config else DEVICE_PIN_ORDER
+    body_types = {dt for dt, pins in po.items() if "B" in pins}
     nets: Set[str] = set()
     for device in devices:
-        if device.dev_type in {"NMOS", "PMOS"}:
+        if device.dev_type in body_types:
             body_net = device.pins.get("B")
             if body_net:
                 nets.add(normalize_net(body_net))
@@ -1169,7 +1404,9 @@ def build_pin_candidates(
     excluded_pins: Set[str],
     coord: CoordMap,
     placement_offsets: Sequence[PlacementOffsetRule] = (),
+    config: Optional[DeviceMappingConfig] = None,
 ) -> Dict[str, List[PinCandidate]]:
+    po = config.pin_order if config else DEVICE_PIN_ORDER
     candidates: Dict[str, List[PinCandidate]] = {}
 
     for device in devices:
@@ -1178,7 +1415,7 @@ def build_pin_candidates(
         if inst is None or shape is None:
             continue
 
-        pin_order = DEVICE_PIN_ORDER.get(inst.dev_type, [])
+        pin_order = po.get(inst.dev_type, [])
         for pin, net in device.pins.items():
             if pin_is_excluded(inst.dev_type, pin, excluded_pins) or pin not in pin_order:
                 continue
@@ -1211,8 +1448,11 @@ def snap_dangling_wire_endpoints(
     threshold: float,
     excluded_pins: Set[str],
     placement_offsets: Sequence[PlacementOffsetRule] = (),
+    config: Optional[DeviceMappingConfig] = None,
 ) -> List[WireAdjustment]:
-    candidates_by_net = build_pin_candidates(page, devices, instances, shapes, excluded_pins, coord, placement_offsets)
+    candidates_by_net = build_pin_candidates(
+        page, devices, instances, shapes, excluded_pins, coord, placement_offsets, config=config,
+    )
     adjustments: List[WireAdjustment] = []
     used_pins: Set[Tuple[str, str]] = set()
 
@@ -1323,7 +1563,9 @@ def draw_pin_adapters(
     threshold: float,
     excluded_pins: Set[str],
     placement_offsets: Sequence[PlacementOffsetRule] = (),
+    config: Optional[DeviceMappingConfig] = None,
 ) -> int:
+    po = config.pin_order if config else DEVICE_PIN_ORDER
     vertices = wire_vertices_by_net(wires)
     adapter_count = 0
 
@@ -1333,7 +1575,7 @@ def draw_pin_adapters(
         if inst is None or shape is None:
             continue
 
-        pin_order = DEVICE_PIN_ORDER.get(inst.dev_type, [])
+        pin_order = po.get(inst.dev_type, [])
         for pin, net in device.pins.items():
             if pin_is_excluded(inst.dev_type, pin, excluded_pins):
                 continue
