@@ -25,6 +25,7 @@
 cadence_to_visio_v2.py         直接绘图主入口
 cadence_to_visio_core.py       解析、几何计算、网表处理、走线处理核心
 circuit.vss                    Visio stencil
+export_cdl_current.il          导出当前活动 schematic 的 CDL 网表
 export_inst_xy_orient.il       Cadence 器件坐标导出脚本
 export_wire_lines_v4.il        Cadence 走线坐标导出脚本
 README.md                      中文说明
@@ -111,6 +112,8 @@ python .\sch2visio_skill\scripts\run_cadence_to_visio.py visio `
 - `inst_info.txt`
 - `wires.tsv`
 
+如果你只缺少 `netlist.cdl` 导出入口，也可以直接使用仓库根目录新增的 `export_cdl_current.il`。
+
 ### 3. 运行自动导出 + 绘图
 
 ```powershell
@@ -176,6 +179,13 @@ c2vExportWireLinesV4("/path/to/output/wires.tsv")
 ```
 
 网表建议保存为 `netlist.cdl`。
+
+导出当前活动 schematic 的 CDL：
+
+```lisp
+load("/path/to/cadence_to_visio/export_cdl_current.il")
+export_cdl_current("/path/to/output/netlist.cdl")
+```
 
 ## 输入文件说明
 
