@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+output/
+*.vsdx
+assets/visio/~$$circuit.~vss
+scripts/project/__pycache__/

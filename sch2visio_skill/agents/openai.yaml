@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sch2Visio"
+  short_description: "Export current Virtuoso schematic and draw Visio"
+  default_prompt: "ªÊ÷∆visio"
