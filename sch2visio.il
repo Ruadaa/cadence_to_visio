@@ -7,7 +7,7 @@
 ;
 ; Usage:
 ;   load("/path/to/cadence_to_visio/sch2visio.il")
-;   sch2visio("/path/to/output/out_sa_prech")
+;   sch2visio("/path/to/output/")
 
 procedure(sch2visio(outDir)
   let((cdlIl instIl wireIl cdlOut instOut wireOut)
