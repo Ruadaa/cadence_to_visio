@@ -28,6 +28,7 @@ circuit.vss                    Visio stencil
 export_cdl_current.il          导出当前活动 schematic 的 CDL 网表
 export_inst_xy_orient.il       Cadence 器件坐标导出脚本
 export_wire_lines_v4.il        Cadence 走线坐标导出脚本
+sch2visio.il                   一键导出 netlist.cdl / inst_info.txt / wires.tsv
 README.md                      中文说明
 
 sch2visio_skill/
@@ -55,7 +56,7 @@ Windows 侧：
 远端 Cadence 侧：
 
 - Cadence Virtuoso
-- 可调用的 `sch2visio.il` 或等效导出脚本
+- 可调用的 SKILL 导出脚本
 
 推荐配套：
 
@@ -112,7 +113,9 @@ python .\sch2visio_skill\scripts\run_cadence_to_visio.py visio `
 - `inst_info.txt`
 - `wires.tsv`
 
-如果你只缺少 `netlist.cdl` 导出入口，也可以直接使用仓库根目录新增的 `export_cdl_current.il`。
+如果你只缺少 `netlist.cdl` 导出入口，可以使用仓库根目录的 `export_cdl_current.il`。
+
+如果你希望 Cadence 侧一条命令同时导出三份文件，可以使用仓库根目录的 `sch2visio.il`。
 
 ### 3. 运行自动导出 + 绘图
 
@@ -178,13 +181,18 @@ load("/path/to/cadence_to_visio/export_wire_lines_v4.il")
 c2vExportWireLinesV4("/path/to/output/wires.tsv")
 ```
 
-网表建议保存为 `netlist.cdl`。
-
 导出当前活动 schematic 的 CDL：
 
 ```lisp
 load("/path/to/cadence_to_visio/export_cdl_current.il")
 export_cdl_current("/path/to/output/netlist.cdl")
+```
+
+一键导出当前活动 schematic 的三份文件：
+
+```lisp
+load("/path/to/cadence_to_visio/sch2visio.il")
+sch2visio("/path/to/output/out_dir")
 ```
 
 ## 输入文件说明
@@ -215,6 +223,11 @@ export_cdl_current("/path/to/output/netlist.cdl")
 - 去掉了远端个人目录示例，例如 `/home/wzzheng/...`
 - 删除了 Visio 运行时锁文件 `assets/visio/~$$circuit.~vss`
 
+本次新增的根目录 SKILL 脚本也已做同样脱敏：
+
+- `export_cdl_current.il`
+- `sch2visio.il`
+
 保留但不敏感的内容：
 
 - `VB_REMOTE_HOST`
@@ -224,5 +237,5 @@ export_cdl_current("/path/to/output/netlist.cdl")
 
 ## 注意事项
 
-- 本仓库当前还有其他未提交文件，我这次只会提交 `README.md` 和 `sch2visio_skill/` 相关变更。
+- 本仓库当前还有其他未提交文件，我这次只会提交 `README.md`、`export_cdl_current.il`、`sch2visio.il` 和 `sch2visio_skill/` 相关变更。
 - `sch2visio_skill/scripts/run_cadence_to_visio.py` 里仍保留了对 `assets/cadence` 的引用；复制到本仓库后，这部分正好可以直接复用根目录现有的 `.il` 文件。
