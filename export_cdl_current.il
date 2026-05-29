@@ -1,7 +1,7 @@
 ; File: export_cdl_current.il
 ; Usage:
 ;   load("/path/to/cadence_to_visio/export_cdl_current.il")
-;   export_cdl_current("/path/to/output/SA_PreCh.cdl")
+;   export_cdl_current("/path/to/output/netlist.cdl")
 
 procedure(export_cdl_current(outPath)
   let((cv libName cellName viewName tmpDir tmpTag cdsLib cmd tmpNetlist outFile)
